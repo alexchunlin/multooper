@@ -1,0 +1,57 @@
+export interface CreateSystemRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateSystemRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface CreateNodeRequest {
+  name: string;
+  type: import('./system').NodeType;
+  parentId?: string;
+  description?: string;
+}
+
+export interface UpdateNodeRequest {
+  name?: string;
+  description?: string;
+  parentId?: string;
+}
+
+export interface CreateDARequest {
+  componentId: string;
+  name: string;
+  description?: string;
+  priority?: number;
+}
+
+export interface UpdateDARequest {
+  name?: string;
+  description?: string;
+  priority?: number;
+}
+
+export interface SubmitRatingRequest {
+  daId: string;
+  expertId: string;
+  ordinalValue?: number;
+  multisetValue?: import('./da').MultisetEstimate;
+  confidence?: number;
+  notes?: string;
+}
+
+export interface UpdateCompatibilityRequest {
+  da1Id: string;
+  da2Id: string;
+  value: number;
+  expertId?: string;
+}
+
+export interface ExportOptions {
+  format: 'excel' | 'csv';
+  includeRatings?: boolean;
+  includeCompatibility?: boolean;
+}

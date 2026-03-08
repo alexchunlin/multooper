@@ -1,0 +1,214 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// SYSTEM - Top level entity
+// ============================================================
+model System {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  nodes       SystemNode[]
+  experts     Expert[]
+  solutions   Solution[]
+
+  @@map("systems")
+}
+
+// ============================================================
+// SYSTEM NODE - Hierarchy tree nodes
+// ============================================================
+enum NodeType {
+  system
+  subsystem
+  module
+  component
+}
+
+model SystemNode {
+  id          String   @id @default(uuid())
+  systemId    String   @map("system_id")
+  parentId    String?  @map("parent_id")
+  name        String
+  type        NodeType
+  description String?
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Self-referential relation for hierarchy
+  system      System      @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  parent      SystemNode? @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    SystemNode[] @relation("NodeHierarchy")
+
+  // Design alternatives for this node
+  designAlternatives DesignAlternative[]
+
+  @@map("system_nodes")
+}
+
+// ============================================================
+// DESIGN ALTERNATIVE (DA)
+// ============================================================
+model DesignAlternative {
+  id          String   @id @default(uuid())
+  componentId String   @map("component_id")
+  name        String
+  description String?
+  priority    Int?     // Simple ordinal: 1, 2, 3, ...
+  // Multiset estimate stored as JSON: { l: number, eta: number, counts: number[] }
+  multisetEstimate Json? @map("multiset_estimate")
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  component   SystemNode @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  ratings     Rating[]
+  
+  // Compatibility relations (both directions)
+  compatibilityAsDA1 CompatibilityRating[] @relation("CompatDA1")
+  compatibilityAsDA2 CompatibilityRating[] @relation("CompatDA2")
+  
+  // Solution selections
+  solutionSelections SolutionSelection[]
+
+  @@map("design_alternatives")
+}
+
+// ============================================================
+// EXPERT - For multi-expert rating
+// ============================================================
+model Expert {
+  id          String   @id @default(uuid())
+  systemId    String   @map("system_id")
+  name        String
+  email       String?
+  expertise   String[] // Array of expertise areas
+  weight      Float    @default(1.0) // 0.0 to 1.0
+  reliability Float    @default(1.0) // Track record
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  system      System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  ratings     Rating[]
+
+  @@unique([systemId, email])
+  @@map("experts")
+}
+
+// ============================================================
+// RATING - Quality ratings for DAs
+// ============================================================
+enum RatingTargetType {
+  DA
+  compatibility
+}
+
+model Rating {
+  id            String           @id @default(uuid())
+  expertId      String           @map("expert_id")
+  targetId      String           @map("target_id") // DA ID
+  targetType    RatingTargetType @default(DA) @map("target_type")
+  ordinalValue  Int?             @map("ordinal_value")
+  // Multiset stored as JSON: { l: number, eta: number, counts: number[] }
+  multisetValue Json?            @map("multiset_value")
+  confidence    Float?           // 0.0 to 1.0
+  notes         String?
+  timestamp     DateTime         @default(now())
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  expert        Expert            @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  da            DesignAlternative @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([expertId, targetId, targetType])
+  @@map("ratings")
+}
+
+// ============================================================
+// COMPATIBILITY RATING - Pairwise DA compatibility
+// ============================================================
+enum AggregationMethod {
+  min
+  median
+  average
+  weighted
+}
+
+model CompatibilityRating {
+  id               String            @id @default(uuid())
+  da1Id            String            @map("da1_id")
+  da2Id            String            @map("da2_id")
+  value            Int               // Aggregated value: 0, 1, 2, ..., ν
+  // Expert ratings stored as JSON: { expertId: rating, ... }
+  expertRatings    Json?             @map("expert_ratings")
+  aggregationMethod AggregationMethod @default(median) @map("aggregation_method")
+  version          Int               @default(1)
+  timestamp        DateTime          @default(now())
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  da1              DesignAlternative @relation("CompatDA1", fields: [da1Id], references: [id], onDelete: Cascade)
+  da2              DesignAlternative @relation("CompatDA2", fields: [da2Id], references: [id], onDelete: Cascade)
+
+  // Ensure unique pair (order matters: da1 < da2 by convention)
+  @@unique([da1Id, da2Id])
+  @@map("compatibility_ratings")
+}
+
+// ============================================================
+// SOLUTION - Optimization results
+// ============================================================
+model Solution {
+  id                String   @id @default(uuid())
+  systemId          String   @map("system_id")
+  name              String?
+  // Quality vector stored as JSON: { w: number, e: number[], wLabel: string, eLabel: string }
+  qualityVector     Json     @map("quality_vector")
+  isParetoEfficient Boolean  @default(false) @map("is_pareto_efficient")
+  paretoRank        Int?     @map("pareto_rank")
+  version           Int      @default(1)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  system            System @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  selections        SolutionSelection[]
+
+  @@map("solutions")
+}
+
+// ============================================================
+// SOLUTION SELECTION - Component -> DA mapping in a solution
+// ============================================================
+model SolutionSelection {
+  id          String @id @default(uuid())
+  solutionId  String @map("solution_id")
+  componentId String @map("component_id")
+  daId        String @map("da_id")
+
+  // Relations
+  solution    Solution          @relation(fields: [solutionId], references: [id], onDelete: Cascade)
+  da          DesignAlternative @relation(fields: [daId], references: [id], onDelete: Cascade)
+
+  @@unique([solutionId, componentId])
+  @@map("solution_selections")
+}
