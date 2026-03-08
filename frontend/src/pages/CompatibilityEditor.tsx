@@ -17,13 +17,15 @@ import {
   DialogActions,
   Slider,
   TextField,
+  CircularProgress,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useSystemStore } from '../stores/systemStore';
-import type { CompatibilityRating } from '../types/compatibility';
+import { useHierarchy, useDAs, useCompatibility, useUpdateCompatibility } from '../hooks/useApi';
 import type { DesignAlternative } from '../types/da';
-import { v4 as uuidv4 } from 'uuid';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { useToast } from '../components/common/ToastProvider';
 
 const COMPATIBILITY_COLORS: Record<number, string> = {
   0: '#ef5350', // Red - Incompatible
@@ -81,14 +83,8 @@ const CompatibilityCell: React.FC<CompatibilityCellProps> = ({ da1, da2, value, 
 };
 
 export const CompatibilityEditor: React.FC = () => {
-  const {
-    hierarchy,
-    designAlternatives,
-    compatibilityRatings,
-    addCompatibilityRating,
-    updateCompatibilityRating,
-    getCompatibilityRating,
-  } = useSystemStore();
+  const { currentSystemId } = useSystemStore();
+  const { showSuccess, showError } = useToast();
 
   const [component1Id, setComponent1Id] = useState<string>('');
   const [component2Id, setComponent2Id] = useState<string>('');
@@ -96,6 +92,20 @@ export const CompatibilityEditor: React.FC = () => {
   const [editingPair, setEditingPair] = useState<{ da1: DesignAlternative; da2: DesignAlternative } | null>(null);
   const [ratingValue, setRatingValue] = useState(2);
   const [ratingNotes, setRatingNotes] = useState('');
+
+  // Load data from API
+  const { data: hierarchy = [], isLoading: hierarchyLoading } = useHierarchy(currentSystemId ?? undefined);
+  const { data: designAlternatives = [], isLoading: dasLoading } = useDAs(currentSystemId ?? undefined);
+  const { data: compatibilityRatings = [], isLoading: ratingsLoading, refetch } = useCompatibility(currentSystemId ?? undefined);
+
+  const updateMutation = useUpdateCompatibility();
+
+  const getCompatibilityRating = (da1Id: string, da2Id: string) => {
+    return compatibilityRatings.find(
+      r => (r.da1Id === da1Id && r.da2Id === da2Id) ||
+            (r.da1Id === da2Id && r.da2Id === da1Id)
+    );
+  };
 
   const componentNodes = useMemo(() =>
     hierarchy.filter(n => n.type === 'component'),
@@ -123,58 +133,62 @@ export const CompatibilityEditor: React.FC = () => {
     setEditDialogOpen(true);
   };
 
-  const handleSaveRating = () => {
-    if (!editingPair) return;
+  const handleSaveRating = async () => {
+    if (!editingPair || !currentSystemId) return;
 
-    const existing = getCompatibilityRating(editingPair.da1.id, editingPair.da2.id);
-
-    if (existing) {
-      updateCompatibilityRating(existing.id, {
-        value: ratingValue,
-        timestamp: new Date(),
+    try {
+      await updateMutation.mutateAsync({
+        systemId: currentSystemId,
+        data: {
+          da1Id: editingPair.da1.id,
+          da2Id: editingPair.da2.id,
+          value: ratingValue,
+        },
       });
-    } else {
-      const newRating: CompatibilityRating = {
-        id: uuidv4(),
-        da1Id: editingPair.da1.id,
-        da2Id: editingPair.da2.id,
-        value: ratingValue,
-        expertRatings: { 'default-expert': ratingValue },
-        aggregationMethod: 'median',
-        timestamp: new Date(),
-        version: 1,
-      };
-      addCompatibilityRating(newRating);
-    }
 
-    setEditDialogOpen(false);
-    setEditingPair(null);
+      showSuccess('Compatibility rating saved');
+      setEditDialogOpen(false);
+      setEditingPair(null);
+      refetch();
+    } catch (err) {
+      showError('Failed to save compatibility rating');
+      console.error(err);
+    }
   };
 
-  const handleBatchFill = (value: number) => {
-    if (!component1Id || !component2Id) return;
+  const handleBatchFill = async (value: number) => {
+    if (!component1Id || !component2Id || !currentSystemId) return;
+
+    const updates: Array<{ da1Id: string; da2Id: string; value: number }> = [];
 
     component1DAs.forEach(da1 => {
       component2DAs.forEach(da2 => {
         const existing = getCompatibilityRating(da1.id, da2.id);
         if (!existing) {
-          const newRating: CompatibilityRating = {
-            id: uuidv4(),
+          updates.push({
             da1Id: da1.id,
             da2Id: da2.id,
-            value: value,
-            expertRatings: { 'default-expert': value },
-            aggregationMethod: 'median',
-            timestamp: new Date(),
-            version: 1,
-          };
-          addCompatibilityRating(newRating);
+            value,
+          });
         }
       });
     });
+
+    try {
+      for (const update of updates) {
+        await updateMutation.mutateAsync({
+          systemId: currentSystemId,
+          data: update,
+        });
+      }
+      showSuccess(`Filled ${updates.length} ratings`);
+      refetch();
+    } catch (err) {
+      showError('Failed to batch fill ratings');
+      console.error(err);
+    }
   };
 
-  // Calculate statistics
   const stats = useMemo(() => {
     const totalPairs = componentNodes.length * (componentNodes.length - 1) / 2;
     const ratedPairs = compatibilityRatings.length;
@@ -184,6 +198,10 @@ export const CompatibilityEditor: React.FC = () => {
     return { totalPairs, ratedPairs, incompatiblePairs, goodPairs };
   }, [componentNodes, compatibilityRatings]);
 
+  if (hierarchyLoading || dasLoading || ratingsLoading) {
+    return <LoadingSpinner message="Loading compatibility data..." />;
+  }
+
   if (componentNodes.length < 2) {
     return (
       <Box sx={{ p: 2 }}>
@@ -192,7 +210,7 @@ export const CompatibilityEditor: React.FC = () => {
         </Typography>
         <Alert severity="info">
           You need at least 2 components with Design Alternatives to rate compatibility.
-          Create components in the Hierarchy Editor and add DAs in the DA Manager first.
+          Create components in Hierarchy Editor and add DAs in DA Manager first.
         </Alert>
       </Box>
     );
@@ -271,6 +289,7 @@ export const CompatibilityEditor: React.FC = () => {
                 variant="outlined"
                 color="error"
                 onClick={() => handleBatchFill(0)}
+                disabled={updateMutation.isPending}
               >
                 Fill 0s
               </Button>
@@ -279,6 +298,7 @@ export const CompatibilityEditor: React.FC = () => {
                 variant="outlined"
                 color="success"
                 onClick={() => handleBatchFill(3)}
+                disabled={updateMutation.isPending}
               >
                 Fill 3s
               </Button>
@@ -290,6 +310,12 @@ export const CompatibilityEditor: React.FC = () => {
       {component1Id && component2Id ? (
         <Paper sx={{ flex: 1, overflow: 'auto', p: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {updateMutation.isPending && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                <CircularProgress />
+              </Box>
+            )}
+
             {/* Header row */}
             <Box sx={{ display: 'flex', gap: 1, pl: 15 }}>
               {component2DAs.map(da => (
@@ -433,8 +459,8 @@ export const CompatibilityEditor: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveRating} variant="contained">
-            Save
+          <Button onClick={handleSaveRating} variant="contained" disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
