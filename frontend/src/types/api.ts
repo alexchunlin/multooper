@@ -26,12 +26,14 @@ export interface CreateDARequest {
   name: string;
   description?: string;
   priority?: number;
+  multisetEstimate?: import('./da').MultisetEstimate;
 }
 
 export interface UpdateDARequest {
   name?: string;
   description?: string;
   priority?: number;
+  multisetEstimate?: import('./da').MultisetEstimate;
 }
 
 export interface SubmitRatingRequest {

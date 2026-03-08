@@ -18,8 +18,6 @@ import {
   Paper,
   Alert,
   LinearProgress,
-  Switch,
-  FormControlLabel,
   Slider,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -234,7 +232,7 @@ interface DAFormData {
 }
 
 export const DAManager: React.FC = () => {
-  const { systemId, setCurrentSystem } = useSystemStore();
+  const { currentSystemId: systemId, setCurrentSystem } = useSystemStore();
   const { showSuccess, showError } = useToast();
 
   // Set current system on mount
@@ -243,10 +241,10 @@ export const DAManager: React.FC = () => {
   }, [systemId, setCurrentSystem]);
 
   // Queries
-  const { data: hierarchy = [], isLoading: hierarchyLoading, error: hierarchyError } = useHierarchy(systemId);
-  const { data: das = [], isLoading: dasLoading, error: dasError } = useDAs(systemId);
-  const { data: ratings = [], isLoading: ratingsLoading } = useRatings(systemId);
-  const { data: experts = [] } = useExperts(systemId);
+  const { data: hierarchy = [], isLoading: hierarchyLoading, error: hierarchyError } = useHierarchy(systemId ?? undefined);
+  const { data: das = [], isLoading: dasLoading, error: dasError } = useDAs(systemId ?? undefined);
+  const { data: ratings = [], isLoading: ratingsLoading } = useRatings(systemId ?? undefined);
+  const { data: experts = [] } = useExperts(systemId ?? undefined);
 
   // Mutations
   const createMutation = useCreateDA();

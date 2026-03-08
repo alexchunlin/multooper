@@ -9,7 +9,6 @@ import {
   Grid,
   Box,
   Chip,
-  Skeleton,
 } from '@mui/material';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import WidgetsIcon from '@mui/icons-material/Widgets';

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -110,7 +110,7 @@ function HierarchyEditorInner() {
   const { showSuccess, showError } = useToast();
   const reactFlowInstance = useReactFlow();
   
-  const { data: hierarchy = [], isLoading, error, refetch } = useHierarchy(currentSystemId);
+  const { data: hierarchy = [], isLoading, error, refetch } = useHierarchy(currentSystemId ?? undefined);
   const createMutation = useCreateNode();
   const updateMutation = useUpdateNode();
   const deleteMutation = useDeleteNode();
@@ -176,7 +176,7 @@ function HierarchyEditorInner() {
           data: {
             name: data.name,
             description: data.description,
-            parentId: data.parentId,
+            parentId: data.parentId ?? undefined,
           },
         });
         showSuccess('Node updated');

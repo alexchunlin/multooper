@@ -1,5 +1,5 @@
 import api from './client';
-import type { CompatibilityRating, CompatibilityMatrix } from '../types/compatibility';
+import type { CompatibilityRating } from '../types/compatibility';
 import type { UpdateCompatibilityRequest } from '../types/api';
 
 export interface CompatibilityRatingWithDAs extends CompatibilityRating {

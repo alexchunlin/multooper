@@ -13,7 +13,6 @@ import {
   TextField,
   IconButton,
   Box,
-  Skeleton,
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';

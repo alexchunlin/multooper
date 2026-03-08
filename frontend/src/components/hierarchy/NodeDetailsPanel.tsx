@@ -38,6 +38,7 @@ interface NodeDetailsPanelProps {
   onSave: (id: string, data: Partial<SystemNode>) => void;
   onDelete: (id: string) => void;
   parentId?: string | null;
+  isSaving?: boolean;
 }
 
 export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
@@ -47,6 +48,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   onSave,
   onDelete,
   parentId,
+  isSaving = false,
 }) => {
   const isNew = !node;
   
@@ -182,7 +184,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
               type="submit"
               variant="contained"
               fullWidth
-              disabled={!isDirty && !isNew}
+              disabled={(!isDirty && !isNew) || isSaving}
               sx={{ mb: 1 }}
             >
               {isNew ? 'Add Node' : 'Save Changes'}
