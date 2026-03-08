@@ -46,6 +46,39 @@ lsof -i :3001 -i :5173
 
 If ports are already in use, the servers may still be running from a previous session. Check with `curl http://localhost:3001/api/health`.
 
+### Environment Configuration & Process Management
+
+**Dual Environment Setup**:
+- **Agents** must use Docker browser (`host.docker.internal`) - cannot access `localhost`
+- **User** tests via regular browser - must use `localhost`
+
+**Switching Environments**:
+```bash
+# Before testing with Docker browser
+cd frontend && npm run env:docker
+
+# After testing - ALWAYS restore browser mode
+cd frontend && npm run env:browser
+```
+
+**Process Cleanup**:
+```bash
+# Kill zombie backend processes
+cd backend && npm run cleanup
+
+# Check for orphaned processes
+ps aux | grep "tsx watch"
+
+# Kill manually if needed
+pkill -f "tsx watch.*backend"
+```
+
+**Critical Rules**:
+1. ALWAYS leave the app in browser-ready state (`npm run env:browser`)
+2. NEVER leave zombie `tsx watch` processes running
+3. Properly stop servers with Ctrl+C, not by killing terminal
+4. Before ending a session, verify: `curl http://localhost:3001/api/health`
+
 ---
 
 ## Project Architecture

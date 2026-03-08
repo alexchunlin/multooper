@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "cleanup": "pkill -9 -f 'tsx watch' || true"
   },
   "dependencies": {
     "@prisma/client": "^6.4.0",
