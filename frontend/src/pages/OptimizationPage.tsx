@@ -28,8 +28,12 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TuneIcon from '@mui/icons-material/Tune';
+import SaveIcon from '@mui/icons-material/Save';
+import HistoryIcon from '@mui/icons-material/History';
 import { useSystemStore } from '../stores/systemStore';
 import { useOptimizationStore } from '../stores/optimizationStore';
+import { useSolutions, useSaveSolutions, useSolutionStats } from '../hooks/useApi';
+import { useToast } from '../components/common/ToastProvider';
 import type { Solution, QualityVector } from '../types/optimization';
 import type { DesignAlternative } from '../types/da';
 import { v4 as uuidv4 } from 'uuid';
@@ -118,6 +122,7 @@ export const OptimizationPage: React.FC = () => {
     hierarchy,
     designAlternatives,
     compatibilityRatings,
+    currentSystemId,
   } = useSystemStore();
 
   const {
@@ -131,6 +136,11 @@ export const OptimizationPage: React.FC = () => {
     setProgress,
     clearResults,
   } = useOptimizationStore();
+
+  const saveSolutions = useSaveSolutions();
+  const { data: savedSolutions } = useSolutions(currentSystemId ?? undefined, true);
+  const { data: solutionStats } = useSolutionStats(currentSystemId ?? undefined);
+  const { showSuccess, showError } = useToast();
 
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
   const [minCompatibility, setMinCompatibility] = useState(1);
@@ -200,7 +210,7 @@ export const OptimizationPage: React.FC = () => {
           
           const solution: Solution = {
             id: uuidv4(),
-            systemId: 'current',
+            systemId: currentSystemId || 'local',
             selections,
             qualityVector: {
               w,
@@ -250,6 +260,51 @@ export const OptimizationPage: React.FC = () => {
   const getComponentName = (compId: string) => {
     const comp = hierarchy.find(n => n.id === compId);
     return comp?.name || compId;
+  };
+
+  const handleSaveResults = async () => {
+    if (!currentSystemId || solutions.length === 0) return;
+    
+    const solutionRequests = solutions.map(s => ({
+      name: s.name,
+      selections: s.selections,
+      qualityVector: s.qualityVector,
+      isParetoEfficient: s.isParetoEfficient,
+      paretoRank: s.paretoRank,
+    }));
+    
+    try {
+      await saveSolutions.mutateAsync({ systemId: currentSystemId, solutions: solutionRequests });
+      showSuccess(`Saved ${solutions.length} solutions (${paretoSolutions.length} Pareto-efficient)`);
+    } catch {
+      showError('Failed to save solutions');
+    }
+  };
+
+  const handleLoadSaved = () => {
+    if (!savedSolutions || savedSolutions.length === 0) return;
+    
+    const allLoaded = savedSolutions.map(s => ({ ...s, createdAt: new Date(s.createdAt) }));
+    const paretoLoaded = allLoaded.filter(s => s.isParetoEfficient);
+    
+    setSolutions(allLoaded);
+    setParetoSolutions(paretoLoaded);
+    showSuccess(`Loaded ${allLoaded.length} solutions from database`);
+  };
+
+  const formatTimeAgo = (date: string | null) => {
+    if (!date) return 'never';
+    const now = new Date();
+    const then = new Date(date);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
   };
 
   if (componentNodes.length === 0) {
@@ -384,10 +439,45 @@ export const OptimizationPage: React.FC = () => {
                   </Typography>
                 </Grid>
               </Grid>
+              {solutions.length > 0 && currentSystemId && (
+                <Button
+                  variant="contained"
+                  fullWidth
+                  startIcon={<SaveIcon />}
+                  onClick={handleSaveResults}
+                  disabled={saveSolutions.isPending}
+                  sx={{ mt: 2 }}
+                >
+                  {saveSolutions.isPending ? 'Saving...' : 'Save Results'}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+
+      {solutionStats && solutionStats.totalSolutions > 0 && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <HistoryIcon color="info" />
+            <Typography variant="h6">Saved Results</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+            <Box>
+              <Typography variant="body1">
+                Last run: <strong>{solutionStats.totalSolutions}</strong> solutions (<strong>{solutionStats.paretoSolutions}</strong> Pareto), saved <strong>{formatTimeAgo(solutionStats.lastRunAt)}</strong>
+              </Typography>
+            </Box>
+            <Button
+              variant="outlined"
+              startIcon={<HistoryIcon />}
+              onClick={handleLoadSaved}
+            >
+              Load Saved
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       {paretoSolutions.length > 0 && (
         <Paper sx={{ flex: 1, overflow: 'auto', p: 2 }}>

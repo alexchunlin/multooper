@@ -16,6 +16,7 @@ import {
   Grid,
   Button,
   Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import TableChartIcon from '@mui/icons-material/TableChart';
@@ -23,7 +24,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import * as d3 from 'd3';
 import { useSystemStore } from '../stores/systemStore';
-import { useOptimizationStore } from '../stores/optimizationStore';
+import { useSolutions, useSolutionStats, useHierarchy, useDAs } from '../hooks/useApi';
 import type { Solution } from '../types/optimization';
 
 const ParetoChart: React.FC<{ solutions: Solution[] }> = ({ solutions }) => {
@@ -193,8 +194,14 @@ const QualityDistributionChart: React.FC<{ solutions: Solution[] }> = ({ solutio
 };
 
 export const AnalysisPage: React.FC = () => {
-  const { hierarchy, designAlternatives } = useSystemStore();
-  const { paretoSolutions, solutions } = useOptimizationStore();
+  const { currentSystemId } = useSystemStore();
+  const { data: hierarchy = [], isLoading: hierarchyLoading } = useHierarchy(currentSystemId ?? undefined);
+  const { data: designAlternatives = [], isLoading: dasLoading } = useDAs(currentSystemId ?? undefined);
+  const { data: paretoSolutions = [], isLoading: solutionsLoading } = useSolutions(currentSystemId ?? undefined, true);
+  const { data: stats } = useSolutionStats(currentSystemId ?? undefined);
+
+  const isLoading = hierarchyLoading || dasLoading || solutionsLoading;
+  const totalSolutions = stats?.totalSolutions ?? 0;
 
   const getDAName = (daId: string) => {
     const da = designAlternatives.find(d => d.id === daId);
@@ -260,6 +267,14 @@ export const AnalysisPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   if (paretoSolutions.length === 0) {
     return (
       <Box sx={{ p: 2 }}>
@@ -267,7 +282,7 @@ export const AnalysisPage: React.FC = () => {
           Analysis & Results
         </Typography>
         <Alert severity="info">
-          No optimization results available. Run the optimization from the Optimization Dashboard first.
+          No saved solutions. Run optimization and save results from the Optimization Dashboard.
         </Alert>
       </Box>
     );
@@ -281,7 +296,8 @@ export const AnalysisPage: React.FC = () => {
             Analysis & Results
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {paretoSolutions.length} Pareto-efficient solutions from {solutions.length} total feasible
+            {paretoSolutions.length} Pareto-efficient solutions from {totalSolutions} total saved
+            {stats?.lastRunAt && ` • Last optimization: ${new Date(stats.lastRunAt).toLocaleString()}`}
           </Typography>
         </Box>
         <Button

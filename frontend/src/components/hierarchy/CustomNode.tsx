@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
-import { Paper, Typography, IconButton, Box, Chip, TextField, MenuItem } from '@mui/material';
+import { Paper, Typography, IconButton, Box, Chip, TextField, MenuItem, Select } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -110,6 +110,7 @@ export const CustomNode: React.FC<NodeProps<CustomNodeData>> = memo(({ id, data 
 
   const handleTypeChange = (newType: NodeType) => {
     data.onUpdate(id, { type: newType });
+    setEditingField(null);
   };
 
   const isGroup = data.type === 'group';
@@ -148,23 +149,24 @@ export const CustomNode: React.FC<NodeProps<CustomNodeData>> = memo(({ id, data 
         {/* Header with type and actions */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           {editingField === 'type' ? (
-            <TextField
-              select
+            <Select
               size="small"
               value={data.type}
+              open={editingField === 'type'}
+              onClose={() => setEditingField(null)}
               onChange={(e) => handleTypeChange(e.target.value as NodeType)}
+              autoFocus
               sx={{
+                minWidth: 100,
                 '& .MuiSelect-select': {
                   py: 0.5,
                   fontSize: '0.7rem',
                   fontWeight: 'bold',
                 },
               }}
-              SelectProps={{
-                MenuProps: {
-                  PaperProps: {
-                    sx: { bgcolor: '#2e2e2e' },
-                  },
+              MenuProps={{
+                PaperProps: {
+                  sx: { bgcolor: '#2e2e2e' },
                 },
               }}
             >
@@ -173,7 +175,7 @@ export const CustomNode: React.FC<NodeProps<CustomNodeData>> = memo(({ id, data 
                   {nodeTypeLabels[value]}
                 </MenuItem>
               ))}
-            </TextField>
+            </Select>
           ) : (
             <Chip
               label={typeLabel}

@@ -8,9 +8,10 @@ const drawerWidth = 240;
 
 interface LayoutProps {
   children: React.ReactNode;
+  fullWidth?: boolean;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, fullWidth }) => {
   const { sidebarOpen } = useSystemStore();
 
   return (
@@ -21,7 +22,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: fullWidth ? 0 : 3,
           width: sidebarOpen ? `calc(100% - ${drawerWidth}px)` : '100%',
           ml: sidebarOpen ? `${drawerWidth}px` : 0,
           transition: (theme) =>

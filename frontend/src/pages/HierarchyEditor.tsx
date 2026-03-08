@@ -59,43 +59,6 @@ function HierarchyEditorInner() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
 
-  // Convert hierarchy nodes to ReactFlow nodes using stored positions
-  useEffect(() => {
-    if (hierarchy.length > 0) {
-      const flowNodes: Node[] = hierarchy.map((node) => ({
-        id: node.id,
-        type: 'custom',
-        position: { x: node.x || 0, y: node.y || 0 },
-        data: {
-          label: node.name,
-          type: node.type,
-          description: node.description,
-          tags: node.tags || [],
-          childCount: hierarchy.filter(n => n.parentId === node.id).length,
-          onUpdate: handleUpdateNode,
-          onDelete: handleDeleteNode,
-          onAddChild: handleAddChildToNode,
-          isSelected: selectedNodes.includes(node.id),
-        },
-        selected: selectedNodes.includes(node.id),
-      }));
-
-      const flowEdges: Edge[] = hierarchy
-        .filter(node => node.parentId && !node.groupId)
-        .map((node) => ({
-          id: `${node.parentId}-${node.id}`,
-          source: node.parentId!,
-          target: node.id,
-          type: 'default',
-          animated: false,
-          style: { stroke: '#b0b0b0', strokeWidth: 2 },
-        }));
-
-      setNodes(flowNodes);
-      setEdges(flowEdges);
-    }
-  }, [hierarchy, selectedNodes]);
-
   const handleAddNode = useCallback(async (position: { x: number; y: number }, parentId?: string | null) => {
     try {
       await createMutation.mutateAsync({
@@ -148,25 +111,24 @@ function HierarchyEditorInner() {
     const node = nodes.find(n => n.id === parentId);
     if (!node) return;
 
+    const existingChildren = hierarchy.filter(n => n.parentId === parentId);
+
     const position = {
-      x: node.position.x + 350,
-      y: node.position.y,
+      x: node.position.x + (existingChildren.length * 50),
+      y: node.position.y + 250,
     };
 
     await handleAddNode(position, parentId);
-  }, [nodes, handleAddNode]);
+  }, [nodes, hierarchy, handleAddNode]);
 
   const handlePaneDoubleClick = useCallback((event: React.MouseEvent) => {
     if (event.target instanceof HTMLElement && event.target.closest('.react-flow__node')) {
       return;
     }
 
-    const flowBounds = reactFlowWrapper.current?.getBoundingClientRect();
-    if (!flowBounds) return;
-
-    const position = reactFlowInstance.project({
-      x: event.clientX - flowBounds.left,
-      y: event.clientY - flowBounds.top,
+    const position = reactFlowInstance.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
     });
 
     handleAddNode(position);
@@ -289,6 +251,52 @@ function HierarchyEditorInner() {
     }
   }, [reactFlowInstance]);
 
+  const handleUpdateNodeRef = useRef(handleUpdateNode);
+  const handleDeleteNodeRef = useRef(handleDeleteNode);
+  const handleAddChildToNodeRef = useRef(handleAddChildToNode);
+
+  useEffect(() => {
+    handleUpdateNodeRef.current = handleUpdateNode;
+    handleDeleteNodeRef.current = handleDeleteNode;
+    handleAddChildToNodeRef.current = handleAddChildToNode;
+  });
+
+  useEffect(() => {
+    if (hierarchy.length > 0) {
+      const flowNodes: Node[] = hierarchy.map((node) => ({
+        id: node.id,
+        type: 'custom',
+        position: { x: node.x || 0, y: node.y || 0 },
+        data: {
+          label: node.name,
+          type: node.type,
+          description: node.description,
+          tags: node.tags || [],
+          childCount: hierarchy.filter(n => n.parentId === node.id).length,
+          onUpdate: handleUpdateNodeRef.current,
+          onDelete: handleDeleteNodeRef.current,
+          onAddChild: handleAddChildToNodeRef.current,
+          isSelected: selectedNodes.includes(node.id),
+        },
+        selected: selectedNodes.includes(node.id),
+      }));
+
+      const flowEdges: Edge[] = hierarchy
+        .filter(node => node.parentId && !node.groupId)
+        .map((node) => ({
+          id: `${node.parentId}-${node.id}`,
+          source: node.parentId!,
+          target: node.id,
+          type: 'default',
+          animated: false,
+          style: { stroke: '#b0b0b0', strokeWidth: 2 },
+        }));
+
+      setNodes(flowNodes);
+      setEdges(flowEdges);
+    }
+  }, [hierarchy, selectedNodes, setNodes, setEdges]);
+
   if (isLoading) {
     return <LoadingSpinner message="Loading hierarchy..." />;
   }
@@ -306,8 +314,8 @@ function HierarchyEditorInner() {
   }
 
   return (
-    <Box sx={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Box sx={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', mx: -3, mt: -3, mb: -3 }}>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 3, pt: 3 }}>
         <Box>
           <Typography variant="h4" gutterBottom>
             Hierarchy Editor

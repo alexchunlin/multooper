@@ -104,11 +104,17 @@ export const SystemsList: React.FC = () => {
       ) : (
         <Grid container spacing={3}>
           {systems.map((system) => (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={system.id}>
-              <Card sx={{ bgcolor: '#1e1e1e', '&:hover': { bgcolor: '#2e2e2e' } }}>
+            <Grid size={{ xs: 12, md: 6 }} key={system.id}>
+              <Card sx={{ bgcolor: '#1e1e1e', '&:hover': { bgcolor: '#2e2e2e' }, minWidth: 300 }}>
                 <CardContent>
                   <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                    <Typography variant="h6" noWrap sx={{ flex: 1 }}>
+                    <Typography variant="h6" sx={{
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      marginRight: 1,
+                    }}>
                       {system.name}
                     </Typography>
                     <IconButton
@@ -120,7 +126,18 @@ export const SystemsList: React.FC = () => {
                     </IconButton>
                   </Box>
                   {system.description && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        mt: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                      }}
+                    >
                       {system.description}
                     </Typography>
                   )}
