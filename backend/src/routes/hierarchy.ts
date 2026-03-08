@@ -10,19 +10,27 @@ interface SystemParams { systemId: string; }
 interface NodeParams { systemId: string; nodeId: string; }
 
 // Validation schemas
-const nodeTypeSchema = z.enum(['system', 'subsystem', 'module', 'component']);
+const nodeTypeSchema = z.enum(['system', 'subsystem', 'module', 'component', 'group']);
 
 const createNodeSchema = z.object({
   name: z.string().min(1).max(100),
   type: nodeTypeSchema,
   parentId: z.string().uuid().optional().nullable(),
+  groupId: z.string().uuid().optional().nullable(),
   description: z.string().max(500).optional(),
+  tags: z.array(z.string()).default([]),
+  x: z.number().optional(),
+  y: z.number().optional(),
 });
 
 const updateNodeSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable(),
   parentId: z.string().uuid().optional().nullable(),
+  groupId: z.string().uuid().optional().nullable(),
+  tags: z.array(z.string()).optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
 });
 
 const bulkHierarchySchema = z.array(
@@ -150,6 +158,16 @@ router.post('/nodes', async (req: Request<SystemParams>, res: Response) => {
     }
   }
 
+  // Validate group exists if provided
+  if (data.groupId) {
+    const group = await prisma.systemNode.findFirst({
+      where: { id: data.groupId, systemId, type: 'group' },
+    });
+    if (!group) {
+      throw new BadRequestError('Group node not found in this system');
+    }
+  }
+
   const node = await prisma.systemNode.create({
     data: {
       systemId,
@@ -176,6 +194,7 @@ router.get('/nodes/:nodeId', async (req: Request<NodeParams>, res: Response) => 
     where: { id: nodeId, systemId },
     include: {
       children: true,
+      members: true,
       designAlternatives: true,
       _count: {
         select: {
@@ -218,6 +237,16 @@ router.put('/nodes/:nodeId', async (req: Request<NodeParams>, res: Response) => 
     });
     if (!parent) {
       throw new BadRequestError('Parent node not found in this system');
+    }
+  }
+
+  // Validate new group if changing
+  if (data.groupId !== undefined && data.groupId !== null) {
+    const group = await prisma.systemNode.findFirst({
+      where: { id: data.groupId, systemId, type: 'group' },
+    });
+    if (!group) {
+      throw new BadRequestError('Group node not found in this system');
     }
   }
 

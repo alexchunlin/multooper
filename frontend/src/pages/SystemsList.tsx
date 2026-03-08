@@ -21,10 +21,12 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorAlert } from '../components/common/ErrorAlert';
 import { EmptyState } from '../components/common/EmptyState';
 import { useToast } from '../components/common/ToastProvider';
+import { useSystemStore } from '../stores/systemStore';
 
 export const SystemsList: React.FC = () => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
+  const { setCurrentSystem } = useSystemStore();
   
   const { data: systems, isLoading, error, refetch } = useSystems();
   const createMutation = useCreateSystem();
@@ -47,6 +49,7 @@ export const SystemsList: React.FC = () => {
       setNewSystemName('');
       setNewSystemDescription('');
       showSuccess('System created successfully');
+      setCurrentSystem(newSystem.id);
       navigate(`/systems/${newSystem.id}`);
     } catch (err) {
       showError('Failed to create system');
@@ -102,7 +105,7 @@ export const SystemsList: React.FC = () => {
         <Grid container spacing={3}>
           {systems.map((system) => (
             <Grid size={{ xs: 12, md: 6, lg: 4 }} key={system.id}>
-              <Card>
+              <Card sx={{ bgcolor: '#1e1e1e', '&:hover': { bgcolor: '#2e2e2e' } }}>
                 <CardContent>
                   <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                     <Typography variant="h6" noWrap sx={{ flex: 1 }}>
@@ -153,7 +156,7 @@ export const SystemsList: React.FC = () => {
         </Grid>
       )}
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: '#1e1e1e' } }}>
         <DialogTitle>Create New System</DialogTitle>
         <DialogContent>
           <TextField
@@ -181,8 +184,8 @@ export const SystemsList: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleCreateSystem} 
+          <Button
+            onClick={handleCreateSystem}
             variant="contained"
             disabled={!newSystemName.trim() || createMutation.isPending}
           >
@@ -191,17 +194,17 @@ export const SystemsList: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} maxWidth="xs">
+      <Dialog open={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} maxWidth="xs" PaperProps={{ sx: { bgcolor: '#1e1e1e' } }}>
         <DialogTitle>Delete System?</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete this system? This will also delete all hierarchy nodes, 
+            Are you sure you want to delete this system? This will also delete all hierarchy nodes,
             design alternatives, and solutions. This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={() => deleteConfirmId && handleDeleteSystem(deleteConfirmId)}
             color="error"
             variant="contained"

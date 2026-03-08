@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "system_nodes" ALTER COLUMN "height" SET DEFAULT 200,
+ALTER COLUMN "width" SET DEFAULT 320;

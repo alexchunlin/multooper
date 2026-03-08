@@ -14,7 +14,7 @@ export const Dashboard: React.FC = () => {
       
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
+          <Card sx={{ bgcolor: '#1e1e1e' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Quick Actions
@@ -38,7 +38,7 @@ export const Dashboard: React.FC = () => {
         </Grid>
         
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card>
+          <Card sx={{ bgcolor: '#1e1e1e' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Getting Started

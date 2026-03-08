@@ -8,7 +8,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3001),
   DATABASE_URL: z.string().url(),
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  CORS_ORIGIN: z.string().default('*'),
 });
 
 export type Env = z.infer<typeof envSchema>;

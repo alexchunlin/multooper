@@ -37,15 +37,22 @@ enum NodeType {
   subsystem
   module
   component
+  group
 }
 
 model SystemNode {
   id          String   @id @default(uuid())
   systemId    String   @map("system_id")
   parentId    String?  @map("parent_id")
+  groupId     String?  @map("group_id")
   name        String
   type        NodeType
   description String?
+  tags        String[]
+  x           Float    @default(0)
+  y           Float    @default(0)
+  width       Float    @default(320)
+  height      Float    @default(200)
   version     Int      @default(1)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -54,6 +61,8 @@ model SystemNode {
   system      System      @relation(fields: [systemId], references: [id], onDelete: Cascade)
   parent      SystemNode? @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children    SystemNode[] @relation("NodeHierarchy")
+  group       SystemNode? @relation("NodeGroup", fields: [groupId], references: [id], onDelete: Cascade)
+  members     SystemNode[] @relation("NodeGroup")
 
   // Design alternatives for this node
   designAlternatives DesignAlternative[]

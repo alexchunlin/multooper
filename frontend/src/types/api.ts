@@ -12,13 +12,21 @@ export interface CreateNodeRequest {
   name: string;
   type: import('./system').NodeType;
   parentId?: string;
+  groupId?: string;
   description?: string;
+  tags?: string[];
+  x?: number;
+  y?: number;
 }
 
 export interface UpdateNodeRequest {
   name?: string;
   description?: string;
-  parentId?: string;
+  parentId?: string | null;
+  groupId?: string | null;
+  tags?: string[];
+  x?: number;
+  y?: number;
 }
 
 export interface CreateDARequest {

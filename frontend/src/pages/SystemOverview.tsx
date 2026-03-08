@@ -133,13 +133,14 @@ export const SystemOverview: React.FC = () => {
       <Grid container spacing={3}>
         {quickLinks.map((link) => (
           <Grid size={{ xs: 12, md: 6, lg: 4 }} key={link.title}>
-            <Card 
-              sx={{ 
+            <Card
+              sx={{
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 cursor: 'pointer',
-                '&:hover': { boxShadow: 4 },
+                bgcolor: '#1e1e1e',
+                '&:hover': { bgcolor: '#2e2e2e', boxShadow: 4 },
               }}
               onClick={() => navigate(link.path)}
             >

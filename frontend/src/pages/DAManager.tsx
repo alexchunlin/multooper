@@ -42,6 +42,7 @@ const NODE_TYPE_COLORS: Record<NodeType, string> = {
   subsystem: '#2e7d32',
   module: '#ed6c02',
   component: '#9c27b0',
+  group: '#424242',
 };
 
 const RATING_LABELS = ['Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
