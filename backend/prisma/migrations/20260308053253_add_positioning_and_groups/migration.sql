@@ -1,0 +1,12 @@
+-- AlterEnum
+ALTER TYPE "NodeType" ADD VALUE 'group';
+
+-- AlterTable
+ALTER TABLE "system_nodes" ADD COLUMN     "group_id" TEXT,
+ADD COLUMN     "height" DOUBLE PRECISION NOT NULL DEFAULT 120,
+ADD COLUMN     "width" DOUBLE PRECISION NOT NULL DEFAULT 220,
+ADD COLUMN     "x" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "y" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- AddForeignKey
+ALTER TABLE "system_nodes" ADD CONSTRAINT "system_nodes_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "system_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
